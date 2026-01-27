@@ -2,18 +2,58 @@
 
 A checkpoint tool for your Git working directory. Save your current state, keep working, restore if things go wrong.
 
-## Why this exists
+## git-snapshot vs git stash
 
-**`git stash` isn't quite right for checkpointing:**
+These are **complementary tools**, not replacements for each other. Both have their place in a Git workflow.
 
 | | git stash | git-snapshot |
 |---|---|---|
-| Clears working directory | Yes | No - keeps your changes in place |
-| Preserves staged vs unstaged | No - everything becomes unstaged | Yes - restores exact staging state |
-| Naming | `stash@{0}`, `stash@{1}` | `my-feature.a1b2c3d4` |
-| Use case | "Put this aside, do something else" | "Checkpoint this, keep experimenting" |
+| **Purpose** | Shelve changes temporarily | Create a restore point |
+| **Working directory** | Cleared (changes removed) | Unchanged (keep working) |
+| **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged |
+| **Naming** | `stash@{0}`, `stash@{1}` | `my-feature.a1b2c3d4` |
+| **Storage** | Inside repo (`.git/`) | External (`~/.local/share/`) |
+| **Best for** | Context switching | Safety nets |
 
-**The workflow git-snapshot enables:**
+### When to use git stash
+
+```bash
+# You're mid-work but need to switch branches
+git stash
+git checkout other-branch
+# ... do stuff ...
+git checkout -
+git stash pop
+```
+
+**Use stash when you need to:**
+- Quickly switch branches without committing
+- Pull changes when you have local modifications  
+- Temporarily clear your working directory
+- Park changes you'll come back to shortly
+
+### When to use git-snapshot
+
+```bash
+# You're about to try something risky
+git-snapshot before-refactor
+# ... experiment freely ...
+# If it goes wrong:
+git-snapshot restore before-refactor
+```
+
+**Use git-snapshot when you want to:**
+- Create a safety checkpoint before risky changes
+- Keep working while having a restore point
+- Preserve exact staging state (specific hunks staged for a future commit)
+- Maintain named checkpoints across sessions
+
+### The key difference
+
+**Stash says:** "Hold this for me while I do something else"  
+**Snapshot says:** "Remember this state in case I need to come back"
+
+## The workflow git-snapshot enables
 
 ```bash
 # You're working on a feature, things are looking good
