@@ -53,6 +53,36 @@ git-snapshot restore before-refactor
 **Stash says:** "Hold this for me while I do something else"  
 **Snapshot says:** "Remember this state in case I need to come back"
 
+### Important: How they handle concurrent changes
+
+This is a critical difference to understand:
+
+**Stash stores diffs (patches)**
+```bash
+# You edit file-a lines 1-10, stage them
+git stash
+# Colleague's changes to lines 30-40 come in via pull
+git pull
+git stash pop
+# Result: BOTH changes are kept (yours merged on top)
+```
+
+**Snapshot stores full file contents**
+```bash
+# You edit file-a lines 1-10, stage them
+git-snapshot checkpoint
+# Discard, pull colleague's changes to lines 30-40
+git checkout -- . && git pull
+git-snapshot restore checkpoint
+# Result: File restored to YOUR exact state - colleague's changes are gone
+```
+
+This is by design:
+- **Stash** applies your changes *relative to current state* - good for temporary shelving while collaborating
+- **Snapshot** restores files to an *exact checkpoint* - good for "undo everything since this point"
+
+If you want to preserve others' changes while restoring yours, use stash. If you want to hard-reset to a known good state, use snapshot.
+
 ## The workflow git-snapshot enables
 
 ```bash
