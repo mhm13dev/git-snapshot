@@ -2,18 +2,93 @@
 
 A checkpoint tool for your Git working directory. Save your current state, keep working, restore if things go wrong.
 
-## Why this exists
+## git-snapshot vs git stash
 
-**`git stash` isn't quite right for checkpointing:**
+These are **complementary tools**, not replacements for each other. Both have their place in a Git workflow.
 
 | | git stash | git-snapshot |
 |---|---|---|
-| Clears working directory | Yes | No - keeps your changes in place |
-| Preserves staged vs unstaged | No - everything becomes unstaged | Yes - restores exact staging state |
-| Naming | `stash@{0}`, `stash@{1}` | `my-feature.a1b2c3d4` |
-| Use case | "Put this aside, do something else" | "Checkpoint this, keep experimenting" |
+| **Purpose** | Shelve changes temporarily | Create a restore point |
+| **Working directory** | Cleared (changes removed) | Unchanged (keep working) |
+| **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged |
+| **Naming** | `stash@{0}`, `stash@{1}` | `my-feature.a1b2c3d4` |
+| **Storage** | Inside repo (`.git/`) | External (`~/.local/share/`) |
+| **Best for** | Pulling remote changes | Everything else |
 
-**The workflow git-snapshot enables:**
+### When to use git stash
+
+```bash
+# You have local changes but need to pull remote updates
+git stash
+git pull
+git stash pop
+# Your changes are merged with the pulled changes
+```
+
+**Use stash when you need to:**
+- Pull remote changes while preserving local work
+- Merge your changes *on top of* updated code
+
+Stash applies your changes as a patch - this is specifically useful when you need to incorporate others' changes alongside yours.
+
+### When to use git-snapshot
+
+```bash
+# Switching branches for a quick fix
+git-snapshot wip
+git checkout other-branch
+# ... fix something ...
+git checkout -
+git-snapshot restore wip
+
+# Or: checkpoint before risky refactor
+git-snapshot before-refactor
+# ... experiment freely ...
+git-snapshot restore before-refactor  # if things go wrong
+```
+
+**Use git-snapshot when you want to:**
+- Switch branches while preserving exact staging state (staged hunks stay staged)
+- Create a safety checkpoint before risky changes
+- Keep working while having a restore point
+- Maintain named checkpoints across sessions
+
+### The key difference
+
+**Stash says:** "Hold this while I pull, then merge it back"  
+**Snapshot says:** "Remember this exact state in case I need to come back"
+
+### Important: How they handle concurrent changes
+
+This is a critical difference to understand:
+
+**Stash stores diffs (patches)**
+```bash
+# You edit file-a lines 1-10, stage them
+git stash
+# Colleague's changes to lines 30-40 come in via pull
+git pull
+git stash pop
+# Result: BOTH changes are kept (yours merged on top)
+```
+
+**Snapshot stores full file contents**
+```bash
+# You edit file-a lines 1-10, stage them
+git-snapshot checkpoint
+# Discard, pull colleague's changes to lines 30-40
+git checkout -- . && git pull
+git-snapshot restore checkpoint
+# Result: File restored to YOUR exact state - colleague's changes are gone
+```
+
+This is by design:
+- **Stash** applies your changes *relative to current state* - good for temporary shelving while collaborating
+- **Snapshot** restores files to an *exact checkpoint* - good for "undo everything since this point"
+
+**Bottom line:** Need to pull remote changes? Use stash. For everything else (branch switching, checkpoints, preserving staged hunks), use snapshot.
+
+## The workflow git-snapshot enables
 
 ```bash
 # You're working on a feature, things are looking good
