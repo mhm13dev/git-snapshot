@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, unlinkSync, existsSync } from "node:fs";
 import { createInterface } from "node:readline";
 import os from "node:os";
 import path from "node:path";
+import { customAlphabet } from "nanoid";
 import { cac } from "cac";
 
 // ============================================================================
@@ -15,18 +15,40 @@ const SNAPSHOTS_DIR = path.join(
 );
 const SNAPSHOT_EXT = ".snapshot";
 
+/**
+ * Current snapshot metadata schema version.
+ *
+ * Used in snapshot metadata to determine the version of the schema.
+ */
+const SNAPSHOT_METADATA_VERSION = 2;
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-function generateHash(): string {
-  const input = `${Date.now()}${Math.random().toString(36).slice(2)}`;
-  return createHash("sha256").update(input).digest("hex").slice(0, 8);
+/**
+ * Custom nanoid generator.
+ */
+const nanoid = (size: number = 8) => {
+  const numerics = "0123456789";
+  const alphabets = "abcdefghijklmnopqrstuvwxyz";
+  const alphabetsUpper = alphabets.toUpperCase();
+  const alphabet = [...alphabets, ...alphabetsUpper, ...numerics].join("");
+  return customAlphabet(alphabet, size)();
+};
+
+/**
+ * Generates a unique 8-character ID for a snapshot.
+ * Used in snapshot filenames (e.g. `my-feature.V1StGXR8.snapshot`) and when restoring by ID.
+ */
+function generateId(): string {
+  return nanoid(8);
 }
 
 async function getRepoRemote(): Promise<string> {
-  const output = await Bun.$`git config --get remote.origin.url`.text();
-  return output.trim();
+  const proc = Bun.$`git config --get remote.origin.url`.quiet();
+  const text = await proc.text().catch(() => "");
+  return text.trim();
 }
 
 async function getRepoPath(): Promise<string> {
@@ -62,9 +84,11 @@ function ensureSnapshotsDir(): void {
   }
 }
 
-interface SnapshotMetadata {
+/**
+ * Common fields across all metadata versions.
+ */
+interface SnapshotMetadataBase {
   name: string;
-  hash: string;
   repo_remote: string;
   repo_path: string;
   branch: string;
@@ -75,6 +99,41 @@ interface SnapshotMetadata {
   untracked_files: string[];
 }
 
+/**
+ * Legacy snapshot metadata (bash).
+ *
+ * No `__v` or `__v: 1`, uses `hash`.
+ */
+interface SnapshotMetadataV1 extends SnapshotMetadataBase {
+  __v?: 1;
+  /**
+   * @deprecated Newer snapshots use `id` instead.
+   * Use {@link getSnapshotId} to correctly get the snapshot identifier.
+   */
+  hash: string;
+}
+
+interface SnapshotMetadataV2 extends SnapshotMetadataBase {
+  __v: 2;
+  id: string;
+}
+
+/**
+ * Version-discriminated union. Use when parsing raw metadata.
+ */
+type SnapshotMetadata = SnapshotMetadataV1 | SnapshotMetadataV2;
+
+/**
+ * Snapshot identifier
+ *
+ * In metadata `__v: 1`, it's the `hash` field.
+ *
+ * In metadata `__v: 2` and above, it's the `id` field.
+ */
+function getSnapshotId(meta: SnapshotMetadata): string {
+  return "id" in meta ? meta.id : meta.hash;
+}
+
 async function getSnapshotMetadata(
   snapshotPath: string
 ): Promise<SnapshotMetadata | null> {
@@ -82,6 +141,7 @@ async function getSnapshotMetadata(
     const bytes = await Bun.file(snapshotPath).bytes();
     const archive = new Bun.Archive(bytes);
     const files = await archive.files();
+
     let raw: string | undefined;
     for (const [p, file] of files) {
       if (p === "metadata.json" || p === "./metadata.json") {
@@ -89,7 +149,9 @@ async function getSnapshotMetadata(
         break;
       }
     }
+
     if (!raw) return null;
+
     return JSON.parse(raw) as SnapshotMetadata;
   } catch {
     return null;
@@ -182,7 +244,7 @@ async function createSnapshot(name: string | undefined): Promise<void> {
   await ensureGitRepo();
   ensureSnapshotsDir();
 
-  const hash = generateHash();
+  const id = generateId();
   const repoRemote = await getRepoRemote();
   const repoPath = await getRepoPath();
   const branch = await getCurrentBranch();
@@ -241,9 +303,10 @@ async function createSnapshot(name: string | undefined): Promise<void> {
     archiveEntries["untracked/" + file] = content;
   }
 
-  const metadata: SnapshotMetadata = {
+  const metadata: SnapshotMetadataV2 = {
+    __v: SNAPSHOT_METADATA_VERSION,
     name: name ?? "",
-    hash,
+    id,
     repo_remote: repoRemote,
     repo_path: repoPath,
     branch,
@@ -256,8 +319,8 @@ async function createSnapshot(name: string | undefined): Promise<void> {
   archiveEntries["metadata.json"] = JSON.stringify(metadata, null, 2);
 
   const filename = name
-    ? `${name}.${hash}${SNAPSHOT_EXT}`
-    : `${hash}${SNAPSHOT_EXT}`;
+    ? `${name}.${id}${SNAPSHOT_EXT}`
+    : `${id}${SNAPSHOT_EXT}`;
   const snapshotPath = path.join(SNAPSHOTS_DIR, filename);
   const archive = new Bun.Archive(archiveEntries, { compress: "gzip" });
   await Bun.write(snapshotPath, archive);
@@ -272,7 +335,7 @@ async function createSnapshot(name: string | undefined): Promise<void> {
   if (name) {
     console.log("  git-snapshot restore", name);
   } else {
-    console.log("  git-snapshot restore", hash);
+    console.log("  git-snapshot restore", id);
   }
 }
 
@@ -305,16 +368,15 @@ async function listSnapshots(showAll: boolean): Promise<void> {
       continue;
 
     found = true;
-    const base = basenameWithoutExt(e.name);
     const snapName = meta.name ?? "";
-    const snapHash = meta.hash ?? "";
+    const snapId = getSnapshotId(meta);
     const snapBranch = meta.branch ?? "";
     const snapCreated = (meta.created_at ?? "")
       .replace("T", " ")
       .replace("Z", "");
     const snapRepoPath = meta.repo_path ?? "";
 
-    const displayName = snapName ? `${snapName} (${snapHash})` : snapHash;
+    const displayName = snapName ? `${snapName} (${snapId})` : snapId;
 
     if (showAll) {
       console.log(" ", displayName);
@@ -353,7 +415,7 @@ async function showSnapshot(query: string): Promise<void> {
         .replace("Z", "");
       console.error(
         "  [" + (i + 1) + "]",
-        meta.hash,
+        getSnapshotId(meta),
         " ",
         meta.branch,
         " ",
@@ -361,7 +423,7 @@ async function showSnapshot(query: string): Promise<void> {
       );
     }
     console.error("");
-    console.error("Specify the hash to show a specific snapshot");
+    console.error("Specify the ID to show a specific snapshot");
     process.exit(1);
   }
 
@@ -377,9 +439,11 @@ async function showSnapshot(query: string): Promise<void> {
     .replace("Z", "");
   const snapRepoPath = meta.repo_path ?? "";
 
-  console.log("Snapshot:", path.basename(snapshotFile, SNAPSHOT_EXT));
-  console.log("Hash:", meta.hash);
-  if (meta.name) console.log("Name:", meta.name);
+  if (meta.name) {
+    console.log("Snapshot:", path.basename(snapshotFile, SNAPSHOT_EXT));
+    console.log("Name:", meta.name);
+  }
+  console.log("ID:", getSnapshotId(meta));
   console.log("Repo:", path.basename(snapRepoPath));
   console.log("Branch:", meta.branch);
   console.log("Commit:", (meta.commit ?? "").slice(0, 8));
@@ -475,7 +539,7 @@ async function restoreSnapshot(
         .replace("Z", "");
       console.error(
         "  [" + (i + 1) + "]",
-        meta.hash,
+        getSnapshotId(meta),
         " ",
         meta.branch,
         " ",
@@ -528,7 +592,7 @@ async function restoreSnapshot(
   }
   console.log("");
 
-  const tempDir = path.join(os.tmpdir(), "git-snapshot-" + generateHash());
+  const tempDir = path.join(os.tmpdir(), "git-snapshot-" + generateId());
   mkdirSync(tempDir, { recursive: true });
   try {
     const bytes = await Bun.file(snapshotFile).bytes();
@@ -699,7 +763,7 @@ async function renameSnapshot(query: string, newName: string): Promise<void> {
 
   if (matches.length > 1) {
     console.error(
-      "Error: Multiple snapshots match '" + query + "'. Specify the hash."
+      "Error: Multiple snapshots match '" + query + "'. Specify the ID."
     );
     process.exit(1);
   }
@@ -711,7 +775,7 @@ async function renameSnapshot(query: string, newName: string): Promise<void> {
     process.exit(1);
   }
 
-  const newFilename = newName + "." + meta.hash + SNAPSHOT_EXT;
+  const newFilename = newName + "." + getSnapshotId(meta) + SNAPSHOT_EXT;
   const newPath = path.join(SNAPSHOTS_DIR, newFilename);
 
   if (existsSync(newPath)) {
@@ -719,10 +783,7 @@ async function renameSnapshot(query: string, newName: string): Promise<void> {
     process.exit(1);
   }
 
-  const tempDir = path.join(
-    os.tmpdir(),
-    "git-snapshot-rename-" + generateHash()
-  );
+  const tempDir = path.join(os.tmpdir(), "git-snapshot-rename-" + generateId());
   mkdirSync(tempDir, { recursive: true });
   try {
     const bytes = await Bun.file(snapshotFile).bytes();
@@ -764,7 +825,7 @@ async function renameSnapshot(query: string, newName: string): Promise<void> {
 }
 
 // ============================================================================
-// Main / CAC
+// Main
 // ============================================================================
 
 const cli = cac("git-snapshot");
@@ -873,6 +934,6 @@ renameCommand.action(async (name: string, newName: string) => {
 });
 
 cli.help();
-cli.version("2.0.0");
+cli.version("1.0.0-beta.1");
 
 cli.parse();
