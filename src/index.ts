@@ -894,7 +894,7 @@ restoreCommand.action(
 );
 
 const deleteCommand = cli
-  .command("delete <names...>", "Delete snapshot(s)")
+  .command("delete <...names>", "Delete snapshot(s)")
   .alias("rm")
   .usage("delete | rm <name> [name2] ...");
 deleteCommand.action(async (names) => {
