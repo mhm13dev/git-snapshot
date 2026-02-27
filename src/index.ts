@@ -835,7 +835,6 @@ const createAction = async (name: string | undefined) => {
   await createSnapshot(trimmedName);
 };
 
-cli.command("[name]", "Create a snapshot (optional name)").action(createAction);
 cli.command("create [name]", "Explicit create").action(createAction);
 
 cli
@@ -933,7 +932,29 @@ renameCommand.action(async (name: string, newName: string) => {
   await renameSnapshot(trimmedName, trimmedNewName);
 });
 
-cli.help();
+cli
+  .command("[name]", "Create a snapshot (optional name)")
+  .action(createAction)
+  .example(
+    (bin) => `  $ ${bin}                     # Create snapshot without a name`
+  )
+  .example(
+    (bin) => `  $ ${bin} my-feature          # Create snapshot with a name`
+  )
+  .example(
+    (bin) => `  $ ${bin} list                # List snapshots for this repo`
+  )
+  .example((bin) => `  $ ${bin} restore my-feature  # Restore by name`)
+  .example((bin) => `  $ ${bin} restore UFOUuWka    # Restore by ID`);
+
+cli.help((sections) => {
+  const updatedSections = sections.slice(1);
+  updatedSections.unshift({
+    body: "git-snapshot - save and restore working directory snapshots",
+  });
+  return updatedSections;
+});
+
 cli.version("1.0.0-beta.1");
 
 cli.parse();
