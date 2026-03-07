@@ -6,14 +6,14 @@ A checkpoint tool for your Git working directory. Save your current state, keep 
 
 These are **complementary tools**, not replacements for each other. Both have their place in a Git workflow.
 
-| | git stash | git-snapshot |
-|---|---|---|
-| **Purpose** | Shelve changes temporarily | Create a restore point |
-| **Working directory** | Cleared (changes removed) | Unchanged (keep working) |
-| **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged |
-| **Naming** | `stash@{0}`, `stash@{1}` | `my-feature.Ab12Cd34` |
-| **Storage** | Inside repo (`.git/`) | External (`~/.local/share/`) |
-| **Best for** | Pulling remote changes | Everything else |
+|                       | git stash                        | git-snapshot                 |
+| --------------------- | -------------------------------- | ---------------------------- |
+| **Purpose**           | Shelve changes temporarily       | Create a restore point       |
+| **Working directory** | Cleared (changes removed)        | Unchanged (keep working)     |
+| **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged    |
+| **Naming**            | `stash@{0}`, `stash@{1}`         | `my-feature.Ab12Cd34`        |
+| **Storage**           | Inside repo (`.git/`)            | External (`~/.local/share/`) |
+| **Best for**          | Pulling remote changes           | Everything else              |
 
 ### When to use git stash
 
@@ -26,8 +26,9 @@ git stash pop
 ```
 
 **Use stash when you need to:**
+
 - Pull remote changes while preserving local work
-- Merge your changes *on top of* updated code
+- Merge your changes _on top of_ updated code
 
 Stash applies your changes as a patch - this is specifically useful when you need to incorporate others' changes alongside yours.
 
@@ -48,6 +49,7 @@ git-snapshot restore before-refactor  # if things go wrong
 ```
 
 **Use git-snapshot when you want to:**
+
 - Switch branches while preserving exact staging state (staged hunks stay staged)
 - Create a safety checkpoint before risky changes
 - Keep working while having a restore point
@@ -63,6 +65,7 @@ git-snapshot restore before-refactor  # if things go wrong
 This is a critical difference to understand:
 
 **Stash stores diffs (patches)**
+
 ```bash
 # You edit file-a lines 1-10, stage them
 git stash
@@ -73,6 +76,7 @@ git stash pop
 ```
 
 **Snapshot stores full file contents**
+
 ```bash
 # You edit file-a lines 1-10, stage them
 git-snapshot checkpoint
@@ -83,8 +87,9 @@ git-snapshot restore checkpoint
 ```
 
 This is by design:
-- **Stash** applies your changes *relative to current state* - good for temporary shelving while collaborating
-- **Snapshot** restores files to an *exact checkpoint* - good for "undo everything since this point"
+
+- **Stash** applies your changes _relative to current state_ - good for temporary shelving while collaborating
+- **Snapshot** restores files to an _exact checkpoint_ - good for "undo everything since this point"
 
 **Bottom line:** Need to pull remote changes? Use stash. For everything else (branch switching, checkpoints, preserving staged hunks), use snapshot.
 
@@ -107,6 +112,7 @@ git-snapshot restore working-nicely
 **"Why not just commit?"**
 
 You could, but:
+
 - Sometimes you're not at a commit-worthy point - code works but isn't clean/complete
 - Commits are permanent history; snapshots are disposable checkpoints
 - You might have carefully staged specific hunks for a future commit - committing now loses that curation
@@ -114,7 +120,13 @@ You could, but:
 
 ## Installation
 
-Installation and a standalone executable will be provided in a future release.
+**npm** (requires Node 22+):
+
+```bash
+npm i -g @mubshrx/git-snapshot
+```
+
+**Manual:** Download the binary for your platform from [GitHub Releases](https://github.com/mubshrx/git-snapshot/releases) and add it to your PATH.
 
 ## Usage
 
@@ -140,6 +152,7 @@ git-snapshot show my-checkpoint
 ```
 
 Output:
+
 ```
 Snapshot: my-checkpoint.Ab12Cd34
 Name: my-checkpoint
@@ -189,7 +202,7 @@ git-snapshot rename old-name new-name
 ## What gets saved
 
 - **Staged files** - full contents of files/hunks you've `git add`ed
-- **Unstaged files** - full contents of modifications to tracked files not yet staged  
+- **Unstaged files** - full contents of modifications to tracked files not yet staged
 - **Untracked files** - new files not yet added to git (respects `.gitignore`)
 
 Each is stored separately and restored to its original state.
@@ -201,6 +214,7 @@ Snapshots are stored in `~/.local/share/git-snapshots/` (XDG-compliant).
 **File format:** `name.id.snapshot` (e.g., `my-feature.Ab12Cd34.snapshot`)
 
 Each `.snapshot` file is a tarball containing:
+
 ```
 metadata.json       # snapshot info (repo, branch, commit, timestamp, file lists)
 staged/             # full contents of staged files
