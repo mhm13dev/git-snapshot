@@ -15,12 +15,7 @@ const SNAPSHOTS_DIR = path.join(
 );
 const SNAPSHOT_EXT = ".snapshot";
 
-/**
- * Current snapshot metadata schema version.
- *
- * Used in snapshot metadata to determine the version of the schema.
- */
-const SNAPSHOT_METADATA_VERSION = 2;
+const SNAPSHOT_METADATA_VERSION = 1;
 
 // ============================================================================
 // Helper Functions
@@ -84,11 +79,10 @@ function ensureSnapshotsDir(): void {
   }
 }
 
-/**
- * Common fields across all metadata versions.
- */
-interface SnapshotMetadataBase {
+interface SnapshotMetadata {
+  __v: number;
   name: string;
+  id: string;
   repo_remote: string;
   repo_path: string;
   branch: string;
@@ -97,41 +91,6 @@ interface SnapshotMetadataBase {
   staged_files: string[];
   unstaged_files: string[];
   untracked_files: string[];
-}
-
-/**
- * Legacy snapshot metadata (v1).
- *
- * No `__v` or `__v: 1`, uses `hash`.
- */
-interface SnapshotMetadataV1 extends SnapshotMetadataBase {
-  __v?: 1;
-  /**
-   * @deprecated Newer snapshots use `id` instead.
-   * Use {@link getSnapshotId} to correctly get the snapshot identifier.
-   */
-  hash: string;
-}
-
-interface SnapshotMetadataV2 extends SnapshotMetadataBase {
-  __v: 2;
-  id: string;
-}
-
-/**
- * Version-discriminated union. Use when parsing raw metadata.
- */
-type SnapshotMetadata = SnapshotMetadataV1 | SnapshotMetadataV2;
-
-/**
- * Snapshot identifier
- *
- * In metadata `__v: 1`, it's the `hash` field.
- *
- * In metadata `__v: 2` and above, it's the `id` field.
- */
-function getSnapshotId(meta: SnapshotMetadata): string {
-  return "id" in meta ? meta.id : meta.hash;
 }
 
 async function getSnapshotMetadata(
@@ -303,7 +262,7 @@ async function createSnapshot(name: string | undefined): Promise<void> {
     archiveEntries["untracked/" + file] = content;
   }
 
-  const metadata: SnapshotMetadataV2 = {
+  const metadata: SnapshotMetadata = {
     __v: SNAPSHOT_METADATA_VERSION,
     name: name ?? "",
     id,
@@ -369,7 +328,7 @@ async function listSnapshots(showAll: boolean): Promise<void> {
 
     found = true;
     const snapName = meta.name ?? "";
-    const snapId = getSnapshotId(meta);
+    const snapId = meta.id;
     const snapBranch = meta.branch ?? "";
     const snapCreated = (meta.created_at ?? "")
       .replace("T", " ")
@@ -415,7 +374,7 @@ async function showSnapshot(query: string): Promise<void> {
         .replace("Z", "");
       console.error(
         "  [" + (i + 1) + "]",
-        getSnapshotId(meta),
+        meta.id,
         " ",
         meta.branch,
         " ",
@@ -443,7 +402,7 @@ async function showSnapshot(query: string): Promise<void> {
     console.log("Snapshot:", path.basename(snapshotFile, SNAPSHOT_EXT));
     console.log("Name:", meta.name);
   }
-  console.log("ID:", getSnapshotId(meta));
+  console.log("ID:", meta.id);
   console.log("Repo:", path.basename(snapRepoPath));
   console.log("Branch:", meta.branch);
   console.log("Commit:", (meta.commit ?? "").slice(0, 8));
@@ -539,7 +498,7 @@ async function restoreSnapshot(
         .replace("Z", "");
       console.error(
         "  [" + (i + 1) + "]",
-        getSnapshotId(meta),
+        meta.id,
         " ",
         meta.branch,
         " ",
@@ -775,7 +734,7 @@ async function renameSnapshot(query: string, newName: string): Promise<void> {
     process.exit(1);
   }
 
-  const newFilename = newName + "." + getSnapshotId(meta) + SNAPSHOT_EXT;
+  const newFilename = newName + "." + meta.id + SNAPSHOT_EXT;
   const newPath = path.join(SNAPSHOTS_DIR, newFilename);
 
   if (existsSync(newPath)) {
@@ -955,6 +914,6 @@ cli.help((sections) => {
   return updatedSections;
 });
 
-cli.version("1.0.0-beta.1");
+cli.version("0.1.0");
 
 cli.parse();
