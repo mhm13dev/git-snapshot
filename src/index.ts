@@ -21,6 +21,12 @@ const SNAPSHOT_EXT = ".snapshot";
 
 const SNAPSHOT_METADATA_VERSION = 1;
 
+const isDebug = process.env.DEBUG === "1" || process.env.DEBUG === "true";
+
+function isCACError(err: unknown): err is Error {
+  return err instanceof Error && err.name === "CACError";
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -910,14 +916,39 @@ cli
   .example((bin) => `  $ ${bin} restore my-feature  # Restore by name`)
   .example((bin) => `  $ ${bin} restore UFOUuWka    # Restore by ID`);
 
+let suppressHelpBanner = false;
 cli.help((sections) => {
   const updatedSections = sections.slice(1);
-  updatedSections.unshift({
-    body: "git-snapshot - save and restore working directory snapshots",
-  });
+  if (!suppressHelpBanner) {
+    updatedSections.unshift({
+      body: "git-snapshot - save and restore working directory snapshots",
+    });
+  }
   return updatedSections;
 });
 
 cli.version(version);
 
-cli.parse();
+try {
+  cli.parse();
+} catch (err) {
+  if (isDebug) {
+    console.error(err);
+  } else {
+    if (isCACError(err)) {
+      console.error(err.message + "\n");
+      suppressHelpBanner = true;
+      if (cli.matchedCommand) {
+        cli.matchedCommand.outputHelp();
+      } else {
+        cli.outputHelp();
+      }
+      suppressHelpBanner = false;
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Error:", message);
+    }
+  }
+
+  process.exit(1);
+}
