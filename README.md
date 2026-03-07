@@ -12,7 +12,7 @@ These are **complementary tools**, not replacements for each other. Both have th
 | **Working directory** | Cleared (changes removed)        | Unchanged (keep working)     |
 | **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged    |
 | **Naming**            | `stash@{0}`, `stash@{1}`         | `my-feature.Ab12Cd34`        |
-| **Storage**           | Inside repo (`.git/`)            | External (`~/.local/share/`) |
+| **Storage**           | Inside repo (`.git/`)            | External (`~/.local/share/git-snapshot/snapshots/`) |
 | **Best for**          | Pulling remote changes           | Everything else              |
 
 ### When to use git stash
@@ -211,7 +211,7 @@ Each is stored separately and restored to its original state.
 
 ## Storage
 
-Snapshots are stored in `~/.local/share/git-snapshots/` (XDG-compliant).
+Snapshots are stored in `~/.local/share/git-snapshot/snapshots/` (Linux/macOS) or `%LOCALAPPDATA%\git-snapshot\snapshots\` (Windows).
 
 **File format:** `name.id.snapshot` (e.g., `my-feature.Ab12Cd34.snapshot`)
 

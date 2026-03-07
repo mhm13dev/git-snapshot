@@ -11,8 +11,11 @@ import { version } from "../package.json";
 // ============================================================================
 
 const SNAPSHOTS_DIR = path.join(
-  Bun.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"),
-  "git-snapshots"
+  process.platform === "win32"
+    ? Bun.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local")
+    : Bun.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"),
+  "git-snapshot",
+  "snapshots"
 );
 const SNAPSHOT_EXT = ".snapshot";
 
