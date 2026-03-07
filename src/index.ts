@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { customAlphabet } from "nanoid";
 import { cac } from "cac";
+import { version } from "../package.json";
 
 // ============================================================================
 // Constants
@@ -914,6 +915,6 @@ cli.help((sections) => {
   return updatedSections;
 });
 
-cli.version("0.1.0");
+cli.version(version);
 
 cli.parse();

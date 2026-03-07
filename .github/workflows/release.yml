@@ -9,8 +9,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # Required for npm Trusted Publishing (OIDC)
-      contents: write   # Required to create GitHub Release and upload assets
+      id-token: write # Required for npm Trusted Publishing (OIDC)
+      contents: write # Required to create GitHub Release and upload assets
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +34,11 @@ jobs:
             dist/git-snapshot-win32-x64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove binaries before npm publish (shim downloads from GitHub)
+        run: |
+          rm -f dist/git-snapshot-darwin-arm64 dist/git-snapshot-darwin-x64
+          rm -f dist/git-snapshot-linux-x64 dist/git-snapshot-win32-x64.exe
 
       - name: Setup Node (for npm publish)
         uses: actions/setup-node@v4

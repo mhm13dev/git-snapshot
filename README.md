@@ -126,6 +126,8 @@ You could, but:
 npm i -g @mubshrx/git-snapshot
 ```
 
+The npm package is small; the first run downloads the binary for your platform (~60–110 MB) and caches it under `~/.local/share/git-snapshot/bin/` (Linux/macOS) or `%LOCALAPPDATA%\git-snapshot\bin\` (Windows).
+
 **Manual:** Download the binary for your platform from [GitHub Releases](https://github.com/mubshrx/git-snapshot/releases) and add it to your PATH.
 
 ## Usage
