@@ -4,14 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { customAlphabet } from "nanoid";
 import { cac } from "cac";
+import { version } from "../package.json";
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const SNAPSHOTS_DIR = path.join(
-  Bun.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"),
-  "git-snapshots"
+  process.platform === "win32"
+    ? Bun.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local")
+    : Bun.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"),
+  "git-snapshot",
+  "snapshots"
 );
 const SNAPSHOT_EXT = ".snapshot";
 
@@ -914,6 +918,6 @@ cli.help((sections) => {
   return updatedSections;
 });
 
-cli.version("0.1.0");
+cli.version(version);
 
 cli.parse();

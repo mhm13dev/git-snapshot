@@ -12,7 +12,7 @@ These are **complementary tools**, not replacements for each other. Both have th
 | **Working directory** | Cleared (changes removed)        | Unchanged (keep working)     |
 | **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged    |
 | **Naming**            | `stash@{0}`, `stash@{1}`         | `my-feature.Ab12Cd34`        |
-| **Storage**           | Inside repo (`.git/`)            | External (`~/.local/share/`) |
+| **Storage**           | Inside repo (`.git/`)            | External (`~/.local/share/git-snapshot/snapshots/`) |
 | **Best for**          | Pulling remote changes           | Everything else              |
 
 ### When to use git stash
@@ -126,6 +126,8 @@ You could, but:
 npm i -g @mubshrx/git-snapshot
 ```
 
+The npm package is small; the first run downloads the binary for your platform (~60–110 MB) and caches it under `~/.local/share/git-snapshot/bin/` (Linux/macOS) or `%LOCALAPPDATA%\git-snapshot\bin\` (Windows).
+
 **Manual:** Download the binary for your platform from [GitHub Releases](https://github.com/mubshrx/git-snapshot/releases) and add it to your PATH.
 
 ## Usage
@@ -209,7 +211,7 @@ Each is stored separately and restored to its original state.
 
 ## Storage
 
-Snapshots are stored in `~/.local/share/git-snapshots/` (XDG-compliant).
+Snapshots are stored in `~/.local/share/git-snapshot/snapshots/` (Linux/macOS) or `%LOCALAPPDATA%\git-snapshot\snapshots\` (Windows).
 
 **File format:** `name.id.snapshot` (e.g., `my-feature.Ab12Cd34.snapshot`)
 
