@@ -11,7 +11,7 @@ These are **complementary tools**, not replacements for each other. Both have th
 | **Purpose** | Shelve changes temporarily | Create a restore point |
 | **Working directory** | Cleared (changes removed) | Unchanged (keep working) |
 | **Preserves staging** | No - everything becomes unstaged | Yes - staged stays staged |
-| **Naming** | `stash@{0}`, `stash@{1}` | `my-feature.a1b2c3d4` |
+| **Naming** | `stash@{0}`, `stash@{1}` | `my-feature.Ab12Cd34` |
 | **Storage** | Inside repo (`.git/`) | External (`~/.local/share/`) |
 | **Best for** | Pulling remote changes | Everything else |
 
@@ -114,25 +114,14 @@ You could, but:
 
 ## Installation
 
-```bash
-# One-line install
-curl -fsSL https://raw.githubusercontent.com/mhm13dev/git-snapshot/main/install.sh | bash
-
-# Or with custom directory
-curl -fsSL https://raw.githubusercontent.com/mhm13dev/git-snapshot/main/install.sh | bash -s -- ~/.local/bin
-
-# Or clone and install locally
-git clone https://github.com/mhm13dev/git-snapshot.git
-cd git-snapshot
-./install.sh
-```
+Installation and a standalone executable will be provided in a future release.
 
 ## Usage
 
 ### Create a snapshot
 
 ```bash
-git-snapshot                    # snapshot with hash only
+git-snapshot                    # snapshot with ID only
 git-snapshot my-checkpoint      # snapshot with custom name
 git-snapshot create my-name     # explicit create (if name matches a subcommand)
 ```
@@ -152,9 +141,9 @@ git-snapshot show my-checkpoint
 
 Output:
 ```
-Snapshot: my-checkpoint.a1b2c3d4
-Hash: a1b2c3d4
+Snapshot: my-checkpoint.Ab12Cd34
 Name: my-checkpoint
+ID: Ab12Cd34
 Repo: my-project
 Branch: main
 Commit: e5f6g7h8
@@ -174,7 +163,7 @@ Untracked files:
 
 ```bash
 git-snapshot restore my-checkpoint      # restore by name
-git-snapshot restore a1b2c3d4           # restore by hash
+git-snapshot restore Ab12Cd34           # restore by ID
 
 # Selective restore
 git-snapshot restore <name> --staged-only      # only staged changes
@@ -194,7 +183,7 @@ git-snapshot prune                      # delete all snapshots for current repo
 
 ```bash
 git-snapshot rename old-name new-name
-# my-feature.a1b2c3d4.snapshot -> new-name.a1b2c3d4.snapshot
+# my-feature.Ab12Cd34.snapshot -> new-name.Ab12Cd34.snapshot
 ```
 
 ## What gets saved
@@ -209,7 +198,7 @@ Each is stored separately and restored to its original state.
 
 Snapshots are stored in `~/.local/share/git-snapshots/` (XDG-compliant).
 
-**File format:** `name.hash.snapshot` (e.g., `my-feature.a1b2c3d4.snapshot`)
+**File format:** `name.id.snapshot` (e.g., `my-feature.Ab12Cd34.snapshot`)
 
 Each `.snapshot` file is a tarball containing:
 ```

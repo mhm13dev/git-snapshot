@@ -100,7 +100,7 @@ interface SnapshotMetadataBase {
 }
 
 /**
- * Legacy snapshot metadata (bash).
+ * Legacy snapshot metadata (v1).
  *
  * No `__v` or `__v: 1`, uses `hash`.
  */
