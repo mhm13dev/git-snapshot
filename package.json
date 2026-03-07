@@ -8,6 +8,10 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mubshrx/git-snapshot.git"
+  },
   "publishConfig": {
     "access": "public"
   },
